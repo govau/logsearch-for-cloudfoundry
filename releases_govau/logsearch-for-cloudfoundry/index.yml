@@ -1,6 +1,8 @@
 builds:
   0222e668-f640-4de8-45c9-1b24235e8a23:
     version: 0.1.0-govau
+  2ec088de-5e3e-485b-5734-b7a81e72eef3:
+    version: 0.8.0
   458469d4-9adb-43c1-7b1a-75f848296241:
     version: 0.3.0
   4f1ba41d-1a14-4763-78f6-2e2e06162aff:

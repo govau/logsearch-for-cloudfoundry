@@ -182,11 +182,13 @@ describe "app-logmessage-rtr.conf" do
             "@source" => { "type" => "RTR" },
             "@level" => "SOME LEVEL",
             # rtr format - quoted requestRemoteAddr and destIPandPort
-            "@message" => "parser.64.78.234.207.xip.io - [2017-03-16T13:28:25.166+0000] \"GET / HTTP/1.1\" 200 0 1677 \"-\" \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.67 Safari/537.36\" \"10.2.9.104:60079\" \"10.2.32.71:61010\" x_forwarded_for:\"82.209.244.50, 192.168.111.21\" x_forwarded_proto:\"https\" vcap_request_id:\"f322dd76-aacf-422e-49fb-c73bc46ce45b\" response_time:0.001602684 gorouter_time:0.000163 app_time:0.024988 app_id:\"27c02dec-80ce-4af6-94c5-2b51848edae9\" app_index:\"1\"\n"
+            "@message" => "parser.64.78.234.207.xip.io - [2020-01-08T04:13:26.216134503Z] \"GET / HTTP/1.1\" 200 0 1677 \"-\" \"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.67 Safari/537.36\" \"10.2.9.104:60079\" \"10.2.32.71:61010\" x_forwarded_for:\"82.209.244.50, 192.168.111.21\" x_forwarded_proto:\"https\" vcap_request_id:\"f322dd76-aacf-422e-49fb-c73bc46ce45b\" response_time:0.001602684 gorouter_time:0.000163 app_time:0.024988 app_id:\"27c02dec-80ce-4af6-94c5-2b51848edae9\" app_index:\"1\"\n"
         ) do
 
           # no parsing errors
-          it { expect(parsed_results.get("tags")).to eq ["logmessage-rtr"] } # no fail tag
+          it {
+            expect(parsed_results.get("tags")).to eq ["logmessage-rtr"]
+          } # no fail tag
 
           # fields
           it { expect(parsed_results.get("@message")).to eq "200 GET / (1.602 ms)" }
@@ -194,7 +196,7 @@ describe "app-logmessage-rtr.conf" do
 
           it "sets [rtr] fields" do
             expect(parsed_results.get("rtr")["hostname"]).to eq "parser.64.78.234.207.xip.io"
-            expect(parsed_results.get("rtr")["timestamp"]).to eq "2017-03-16T13:28:25.166+0000"
+            expect(parsed_results.get("rtr")["timestamp"]).to eq "2020-01-08T04:13:26.216134503Z"
             expect(parsed_results.get("rtr_time")).to be_nil
             expect(parsed_results.get("rtr")["verb"]).to eq "GET"
             expect(parsed_results.get("rtr")["path"]).to eq "/"
@@ -216,8 +218,8 @@ describe "app-logmessage-rtr.conf" do
             # calculated values
             expect(parsed_results.get("rtr")["remote_addr"]).to eq "82.209.244.50"
             expect(parsed_results.get("rtr")["response_time_ms"]).to eq 1.602
-            #expect(parsed_results.get("rtr")["gorouter_time_ms"]).to_eq 0.000163
-            #expect(parsed_results.get("rtr")["app_time_ms"]).to_eq 0.024988
+            expect(parsed_results.get("rtr")["gorouter_time_ms"]).to eq 0.0
+            expect(parsed_results.get("rtr")["app_time_ms"]).to eq 24.988
           end
 
           it "sets geoip for [rtr][remote_addr]" do

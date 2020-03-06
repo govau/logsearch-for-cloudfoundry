@@ -1,52 +1,19 @@
----
-resource_types:
-- name: slack-notification
-  type: docker-image
-  source:
-    repository: cfcommunity/slack-notification-resource
-    tag: v1.3.1
-
-resources:
-- name: git
-  type: git
-  source:
-    uri: git@github.com:govau/logsearch-for-cloudfoundry.git
-    private_key: {{git_private_key}}
-    branch: govau
-    ignore_paths:
-    - releases/*
-    - releases_govau/*
-    - .final_builds/*
-    - .final_builds_govau
-- name: git-push
-  type: git
-  source:
-    uri: git@github.com:govau/logsearch-for-cloudfoundry.git
-    private_key: {{git_private_key}}
-    branch: govau
-- name: github-release
-  type: github-release
-  source:
-    owner: govau
-    repository: logsearch-for-cloudfoundry
-    access_token: {{git_personal_access_token}}
-- name: version
-  type: semver
-  source:
-    driver: git
-    uri: git@github.com:govau/boshreleases.git
-    branch: master
-    initial_version: 0.0.1
-    file: logsearch-for-cloudfoundry.version
-    private_key: {{git_boshreleases_private_key}}
-- name: slack
-  type: slack-notification
-  source:
-    url: {{slack-webhook-url}}
-
-
 jobs:
 - name: build-it
+  on_failure:
+    params:
+      text: |
+        :x: $BUILD_PIPELINE_NAME FAILED
+        <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+    put: slack
+  on_success:
+    params:
+      text: |
+        :tada: $BUILD_PIPELINE_NAME created a new release of logsearch-for-cloudfoundry
+        <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
+        $TEXT_FILE_CONTENT
+      text_file: github-release-info/body
+    put: slack
   plan:
   - aggregate:
     - get: version
@@ -54,44 +21,68 @@ jobs:
         bump: minor
     - get: git
       trigger: true
-
-  - task: create-bosh-release
-    file: git/ci_govau/create-bosh-release.yml
+  - file: git/ci_govau/create-bosh-release.yml
     params:
+      access_key_id: ((boshrelease_s3_bucket_access_key_id))
       bosh_release_name: logsearch-for-cloudfoundry
-      access_key_id: {{boshrelease_s3_bucket_access_key_id}}
-      secret_access_key: {{boshrelease_s3_bucket_secret_access_key}}
-
-  - put: version
-    params:
+      secret_access_key: ((boshrelease_s3_bucket_secret_access_key))
+    task: create-bosh-release
+  - params:
       file: version/version
-
-  - put: git-push
-    params:
+    put: version
+  - params:
       rebase: true
       repository: boshrelease-output
       tag: version/version
       tag_prefix: v
-
-  - put: github-release
-    params:
-      name: github-release-info/name
-      tag: github-release-info/tag
+    put: git-push
+  - params:
       body: github-release-info/body
       globs:
       - github-release-info/*-*.*.*.tgz
-
-  on_failure:
-    put: slack
-    params:
-      text: |
-        :x: $BUILD_PIPELINE_NAME FAILED
-        <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
-  on_success:
-    put: slack
-    params:
-      text: |
-        :tada: $BUILD_PIPELINE_NAME created a new release of logsearch-for-cloudfoundry
-        <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|View build details>
-        $TEXT_FILE_CONTENT
-      text_file: github-release-info/body
+      name: github-release-info/name
+      tag: github-release-info/tag
+    put: github-release
+resource_types:
+- name: slack-notification
+  source:
+    repository: cfcommunity/slack-notification-resource
+    tag: v1.3.1
+  type: docker-image
+resources:
+- name: git
+  source:
+    branch: govau
+    ignore_paths:
+    - releases/*
+    - releases_govau/*
+    - .final_builds/*
+    - .final_builds_govau
+    private_key: ((git_private_key.private_key))
+    uri: git@github.com:govau/logsearch-for-cloudfoundry.git
+  type: git
+- name: github-release
+  source:
+    access_token: ((git_personal_access_token))
+    owner: govau
+    repository: logsearch-for-cloudfoundry
+  type: github-release
+- name: git-push
+  source:
+    branch: govau
+    private_key: ((git_private_key.private_key))
+    uri: git@github.com:govau/logsearch-for-cloudfoundry.git
+  type: git
+- name: slack
+  source:
+    url: ((slack-webhook-url))
+  type: slack-notification
+- name: version
+  source:
+    branch: master
+    driver: git
+    file: logsearch-for-cloudfoundry.version
+    initial_version: 0.0.1
+    private_key: ((git_boshreleases_private_key.private_key))
+    uri: git@github.com:govau/boshreleases.git
+  type: semver
